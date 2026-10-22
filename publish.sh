@@ -1,0 +1,1 @@
+scp docker-run.sh docker-build-arm64.sh .env.e2b Dockerfile docker-build-browser.sh arm://userdata/android_data/data_1/code/openmuse/

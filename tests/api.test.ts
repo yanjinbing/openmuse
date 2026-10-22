@@ -50,16 +50,24 @@ after(async () => {
   await rm(directory, { recursive: true, force: true });
 });
 
-test("API protects private data and rejects unrelated web origins", async () => {
+test("API protects private data and allows requests from any web origin", async () => {
   assert.equal((await app.request("/api/workspace")).status, 401);
-  assert.equal(
-    (
-      await app.request("/api/workspace", {
-        headers: { ...headers(), Origin: "https://unrelated.example" },
-      })
-    ).status,
-    403,
-  );
+  const response = await app.request("/api/workspace", {
+    headers: { ...headers(), Origin: "https://unrelated.example" },
+  });
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("Access-Control-Allow-Origin"), "*");
+
+  const preflight = await app.request("/api/workspace", {
+    method: "OPTIONS",
+    headers: {
+      Origin: "https://unrelated.example",
+      "Access-Control-Request-Method": "GET",
+      "Access-Control-Request-Headers": "authorization",
+    },
+  });
+  assert.equal(preflight.status, 204);
+  assert.equal(preflight.headers.get("Access-Control-Allow-Origin"), "*");
 });
 test("file operations recover a published PDF when metadata persistence fails", async (t) => {
   const owner = "file-recovery";

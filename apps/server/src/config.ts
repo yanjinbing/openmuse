@@ -44,6 +44,7 @@ export interface Config {
   agentUrl?: string;
   agentToken?: string;
   intelligenceApiKey?: string;
+  richThreads?: boolean;
   googleClientId?: string;
   googleClientSecret?: string;
   googleRedirectUri: string;
@@ -79,7 +80,8 @@ export function required(name: string, message: string, value = process.env[name
 
 export function assertApiDeploymentConfig(
   config: Config,
-): asserts config is Config & { intelligenceApiKey: string } {
+): asserts config is Config & ({ richThreads: false } | { intelligenceApiKey: string }) {
+  if (config.richThreads === false) return;
   required(
     "CPK_INTELLIGENCE_API_KEY",
     intelligenceKeyRequiredMessage,
@@ -149,7 +151,8 @@ export function readConfig(): Config {
     agentBackend: backend,
     agentUrl: process.env.AGENT_URL,
     agentToken: process.env.AGENT_TOKEN,
-    intelligenceApiKey: required("CPK_INTELLIGENCE_API_KEY", intelligenceKeyRequiredMessage),
+    intelligenceApiKey: process.env.CPK_INTELLIGENCE_API_KEY?.trim() || undefined,
+    richThreads: process.env.RICH_THREADS !== "false",
     googleClientId: process.env.GOOGLE_CLIENT_ID,
     googleClientSecret: process.env.GOOGLE_CLIENT_SECRET,
     googleRedirectUri: `${publicUrl}/api/google/callback`,
@@ -172,10 +175,10 @@ export function readConfig(): Config {
   };
   if (
     mode === "live" &&
-    (!config.accessKey || config.accessKey.length < 24 || !config.encryptionKey)
+    (!config.accessKey || config.accessKey.length < 12 || !config.encryptionKey)
   )
     throw new Error(
-      "Live mode requires OPENMUSE_ACCESS_KEY (24+ characters) and TOKEN_ENCRYPTION_KEY (32-byte base64)",
+      "Live mode requires OPENMUSE_ACCESS_KEY (12+ characters) and TOKEN_ENCRYPTION_KEY (32-byte base64)",
     );
   if (mode === "sample" && !["127.0.0.1", "localhost", "::1"].includes(config.host))
     throw new Error("Sample workspace is local-only. HOST must be a loopback address.");
